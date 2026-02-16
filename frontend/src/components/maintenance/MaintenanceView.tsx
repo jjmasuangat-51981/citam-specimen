@@ -327,8 +327,9 @@ const MaintenanceView: React.FC<Props> = ({
   const allSystemFunctional = systemAssets.every((asset) =>
     ["Functional", "Working", "Operational"].includes(asset.status),
   );
-  
-  // Use overlaid workstation status
+
+  // Use overlaid workstation status for parent system unit
+  // If all components are functional, use "Functional", otherwise use the overall workstation status
   const parentSystemUnit = {
     asset_id: -1,
     unit_name: "System Unit (Overall)",
