@@ -72,7 +72,11 @@ const RepairModal: React.FC<Props> = ({
     setReplacementDetails((prev) => ({
       ...prev,
       [assetId]: {
-        ...prev[assetId],
+        ...(prev[assetId] || {
+          new_property_tag: "",
+          new_serial_number: "",
+          new_description: "",
+        }),
         [field]: value,
       },
     }));
@@ -92,9 +96,14 @@ const RepairModal: React.FC<Props> = ({
     try {
       const asset_actions = Array.from(selectedAssets).map((assetId) => {
         const asset = assets.find((a) => a.asset_id === assetId);
-        const action: any = {
+        const action: Record<string, unknown> = {
           asset_id: assetId,
-          action: actionType === "REPAIR" ? "REPAIRED" : actionType === "REPLACE" ? "REPLACED" : "UPGRADED",
+          action:
+            actionType === "REPAIR"
+              ? "REPAIRED"
+              : actionType === "REPLACE"
+                ? "REPLACED"
+                : "UPGRADED",
           status_before: asset?.status || "Unknown",
           status_after: newStatus,
           old_property_tag: asset?.property_tag_no,
@@ -123,9 +132,12 @@ const RepairModal: React.FC<Props> = ({
 
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to create repair log:", err);
-      setError(err.response?.data?.error || "Failed to submit repair log");
+      const error = err as { response?: { data?: { error?: string } } };
+      setError(
+        error.response?.data?.error || "Failed to submit repair log"
+      );
     } finally {
       setLoading(false);
     }

@@ -8,7 +8,7 @@ import {
   User,
   ArrowRight,
 } from "lucide-react";
-import { ServiceLog } from "../../api/maintenance";
+import type { ServiceLog } from "../../api/maintenance";
 
 interface Props {
   logs: ServiceLog[];

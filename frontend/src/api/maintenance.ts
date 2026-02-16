@@ -62,7 +62,15 @@ export interface ServiceLogAsset {
   old_property_tag?: string;
   new_property_tag?: string;
   replacement_asset_id?: number;
-  asset?: any;
+  asset?: {
+    asset_id: number;
+    units?: {
+      unit_name: string;
+    };
+    details?: {
+      property_tag_no?: string;
+    };
+  };
 }
 
 export interface ServiceLogProcedure {
@@ -86,7 +94,10 @@ export const getLabPMCReports = async (labId: number, quarter: string) => {
 };
 
 // 2. GET SINGLE REPORT (By Workstation & Quarter)
-export const getPMCReport = async (workstationId: number, quarter: string) => {
+export const getPMCReport = async (
+  workstationId: number,
+  quarter: string
+): Promise<PMCReport> => {
   const response = await api.get("/maintenance/pmc/detail", {
     params: { workstation_id: workstationId, quarter },
   });
@@ -94,7 +105,9 @@ export const getPMCReport = async (workstationId: number, quarter: string) => {
 };
 
 // 3. CREATE REPORT
-export const createPMCReport = async (data: any) => {
+export const createPMCReport = async (
+  data: Record<string, unknown>
+): Promise<PMCReport> => {
   const response = await api.post("/maintenance/pmc", data);
   return response.data;
 };
@@ -103,15 +116,19 @@ export const createPMCReport = async (data: any) => {
 export const getServiceHistory = async (
   workstationId: number,
   quarter?: string
-) => {
-  const params: any = { workstation_id: workstationId };
+): Promise<ServiceLog[]> => {
+  const params: Record<string, string | number> = {
+    workstation_id: workstationId,
+  };
   if (quarter) params.quarter = quarter;
   const response = await api.get("/maintenance/pmc/history", { params });
   return response.data;
 };
 
 // 5. CREATE REPAIR LOG
-export const createRepairLog = async (data: any) => {
+export const createRepairLog = async (
+  data: Record<string, unknown>
+): Promise<ServiceLog> => {
   const response = await api.post("/maintenance/pmc/repair", data);
   return response.data;
 };
