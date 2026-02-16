@@ -99,6 +99,81 @@ const MaintenanceView: React.FC<Props> = ({
     fetchData();
   }, [fetchData]);
 
+  // --- HELPER: Get Latest Service Log ---
+  const latestServiceLog = serviceLogs.length > 0 ? serviceLogs[0] : null;
+
+  // --- OVERLAY LOGIC: Apply Latest Service Data ---
+  // 1. Overlay asset statuses and remarks from latest service log
+  const overlayAssetData = (assetsList: any[]) => {
+    if (!latestServiceLog || !latestServiceLog.asset_actions) {
+      return assetsList;
+    }
+
+    // Create a map of asset_id -> asset_action for quick lookup
+    const assetActionsMap = new Map(
+      latestServiceLog.asset_actions.map((action) => [
+        action.asset_id,
+        action,
+      ])
+    );
+
+    return assetsList.map((asset) => {
+      const action = assetActionsMap.get(asset.asset_id);
+      if (action) {
+        return {
+          ...asset,
+          status: action.status_after || asset.status,
+          asset_remarks: action.remarks || asset.asset_remarks,
+        };
+      }
+      return asset;
+    });
+  };
+
+  // 2. Get completed procedures (prefer latest service log procedures)
+  const getCompletedProcedures = () => {
+    if (latestServiceLog && latestServiceLog.log_procedures && latestServiceLog.log_procedures.length > 0) {
+      // Use latest service log procedures
+      return latestServiceLog.log_procedures
+        .filter((p) => p.is_checked)
+        .map((p) => ({
+          procedure: {
+            procedure_id: p.procedure?.procedure_id || 0,
+            procedure_name: p.procedure?.procedure_name || "",
+          },
+          is_checked: p.is_checked,
+        }));
+    }
+    // Fall back to PMC report procedures
+    return pmcReport?.procedures || [];
+  };
+
+  // 3. Get workstation status (prefer latest service log status)
+  const getCurrentWorkstationStatus = () => {
+    if (latestServiceLog && latestServiceLog.workstation_status_after) {
+      return latestServiceLog.workstation_status_after;
+    }
+    return pmcReport?.workstation_status || "Unknown";
+  };
+
+  // 4. Get overall remarks (prefer latest service log remarks)
+  const getCurrentRemarks = () => {
+    const hasLatestRemarks = latestServiceLog && latestServiceLog.remarks;
+    return {
+      remarks: hasLatestRemarks ? latestServiceLog.remarks : (pmcReport?.overall_remarks || "No remarks recorded."),
+      isFromServiceLog: hasLatestRemarks,
+      serviceDate: hasLatestRemarks ? latestServiceLog.service_date : null,
+    };
+  };
+
+  // Apply overlay to assets
+  const overlaidAssets = overlayAssetData(assets);
+
+  // Compute derived values once
+  const completedProcedures = getCompletedProcedures();
+  const currentWorkstationStatus = getCurrentWorkstationStatus();
+  const currentRemarksData = getCurrentRemarks();
+
   // --- REPORT GENERATION HANDLER ---
   const handleDownloadReport = () => {
     if (!pmcReport) return;
@@ -118,8 +193,6 @@ const MaintenanceView: React.FC<Props> = ({
       minute: "2-digit",
     });
 
-    const completedProcedures = pmcReport.procedures || [];
-
     // 1. Map Procedures to Checkmarks
     const checkProc = (name: string) =>
       completedProcedures.some((p: any) => p.procedure.procedure_name === name)
@@ -136,13 +209,13 @@ const MaintenanceView: React.FC<Props> = ({
       repl: status === "For Replacement" ? "✓" : "",
     });
 
-    // 3. Separate Assets into Peripherals and System Components
-    const systemComponents = assets.filter((asset) =>
+    // 3. Separate Assets into Peripherals and System Components (use overlaid assets)
+    const systemComponents = overlaidAssets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
       ),
     );
-    const peripheralComponents = assets.filter(
+    const peripheralComponents = overlaidAssets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
           (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
@@ -157,7 +230,7 @@ const MaintenanceView: React.FC<Props> = ({
       remarks: asset.asset_remarks || "",
     }));
 
-    // 5. Add the "System Unit" Parent row
+    // 5. Add the "System Unit" Parent row (use overlaid workstation status)
     const isAllFunctional =
       systemComponents.length > 0 &&
       systemComponents.every((asset) =>
@@ -166,7 +239,7 @@ const MaintenanceView: React.FC<Props> = ({
 
     componentsList.push({
       name: "System Unit",
-      ...mapStatus(pmcReport.workstation_status),
+      ...mapStatus(currentWorkstationStatus),
       tag: "N/A",
       remarks: isAllFunctional ? "Functional" : "",
     });
@@ -230,7 +303,7 @@ const MaintenanceView: React.FC<Props> = ({
       sys_perf: checkProc("System Performance"),
       reg_clean: checkProc("Regular Cleaning"),
       components: componentsList,
-      overall_remarks: pmcReport.overall_remarks || "N/A",
+      overall_remarks: currentRemarksData.remarks || "N/A",
       custodian: rawCustodianName.toUpperCase(),
     };
 
@@ -239,12 +312,12 @@ const MaintenanceView: React.FC<Props> = ({
   };
 
   // --- Data Processing ---
-  const systemAssets = assets.filter((asset) =>
+  const systemAssets = overlaidAssets.filter((asset) =>
     SYSTEM_UNIT_TYPES.some(
       (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
     ),
   );
-  const peripheralAssets = assets.filter(
+  const peripheralAssets = overlaidAssets.filter(
     (asset) =>
       !SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
@@ -254,12 +327,15 @@ const MaintenanceView: React.FC<Props> = ({
   const allSystemFunctional = systemAssets.every((asset) =>
     ["Functional", "Working", "Operational"].includes(asset.status),
   );
+
+  // Use overlaid workstation status for parent system unit
+  // If all components are functional, use "Functional", otherwise use the overall workstation status
   const parentSystemUnit = {
     asset_id: -1,
     unit_name: "System Unit (Overall)",
     property_tag_no: "-",
     description: "Auto-calculated based on components",
-    status: allSystemFunctional ? "Functional" : "For Repair",
+    status: allSystemFunctional ? "Functional" : currentWorkstationStatus,
   };
   const displaySystemAssets =
     systemAssets.length > 0 ? [parentSystemUnit, ...systemAssets] : [];
@@ -281,8 +357,6 @@ const MaintenanceView: React.FC<Props> = ({
       status: pmcReport?.connectivity_speed_status || "N/A",
     },
   ];
-
-  const completedProcedures = pmcReport?.procedures || [];
 
   const ReadOnlyTable = ({
     title,
@@ -454,9 +528,9 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport ? (
             <>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${pmcReport.workstation_status === "For Repair" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${currentWorkstationStatus === "For Repair" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
               >
-                {pmcReport.workstation_status}
+                {currentWorkstationStatus}
               </span>
               {pmcReport.service_count > 1 && (
                 <p className="text-xs text-gray-600 mt-2">
@@ -477,21 +551,21 @@ const MaintenanceView: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowServiceHistory(!showServiceHistory)}
-              className="w-full bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex items-center justify-between cursor-pointer hover:bg-indigo-100 transition-colors"
+              className="w-full bg-amber-50 px-4 py-3 border-b border-amber-100 flex items-center justify-between cursor-pointer hover:bg-amber-100 transition-colors"
             >
               <div className="flex items-center">
-                <History className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-medium text-indigo-900 ml-2">
+                <History className="w-5 h-5 text-amber-600" />
+                <h3 className="font-medium text-amber-900 ml-2">
                   Service History
                 </h3>
-                <span className="ml-2 text-xs text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                <span className="ml-2 text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
                   {serviceLogs.length} {serviceLogs.length === 1 ? "entry" : "entries"}
                 </span>
               </div>
               {showServiceHistory ? (
-                <ChevronUp className="w-5 h-5 text-indigo-600" />
+                <ChevronUp className="w-5 h-5 text-amber-600" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-indigo-600" />
+                <ChevronDown className="w-5 h-5 text-amber-600" />
               )}
             </button>
             {showServiceHistory && (
@@ -558,9 +632,14 @@ const MaintenanceView: React.FC<Props> = ({
           <div className="flex items-center mb-2">
             <AlignLeft className="w-5 h-5 text-gray-500 mr-2" />
             <h3 className="font-medium text-gray-900">Overall Remarks</h3>
+            {currentRemarksData.isFromServiceLog && currentRemarksData.serviceDate && (
+              <span className="ml-2 text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                Latest service: {new Date(currentRemarksData.serviceDate).toLocaleDateString()}
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-700 whitespace-pre-wrap pl-7">
-            {pmcReport?.overall_remarks || "No overall remarks provided."}
+            {currentRemarksData.remarks || "No remarks recorded."}
           </p>
         </div>
       </div>
@@ -571,7 +650,7 @@ const MaintenanceView: React.FC<Props> = ({
           workstation={workstation}
           quarter={quarter}
           labId={pmcReport.lab_id}
-          assets={assets}
+          assets={overlaidAssets}
           statusOptions={statusOptions}
           onSuccess={() => {
             setShowRepairModal(false);
