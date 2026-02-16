@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getPMCReport } from "../../api/maintenance";
-import { getWorkstationAssets } from "../../api/inventory";
+import { getPMCReport, getServiceHistory } from "../../api/maintenance";
+import { getWorkstationAssets, getAssetStatuses } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext"; // ✅ Imported to get Custodian Name
 import {
   Monitor,
@@ -13,9 +13,12 @@ import {
   Network,
   AlignLeft,
   Download, // ✅ Added Download Icon
+  History,
 } from "lucide-react";
 // ✅ Import the generator utility we will create below
 import { generateQPMCReport } from "../../utils/reportGenerator";
+import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
+import RepairModal from "./RepairModal";
 
 interface Props {
   workstation: { id: number; name: string; lab_name?: string };
@@ -47,7 +50,10 @@ const MaintenanceView: React.FC<Props> = ({
   const { user } = useAuth(); // ✅ Get logged-in user (Custodian)
   const [pmcReport, setPmcReport] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
+  const [serviceLogs, setServiceLogs] = useState<any[]>([]);
+  const [statusOptions, setStatusOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showRepairModal, setShowRepairModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -70,9 +76,18 @@ const MaintenanceView: React.FC<Props> = ({
 
       const reportData = await getPMCReport(workstation.id, quarter);
       setPmcReport(reportData);
+
+      // Fetch service history
+      const historyData = await getServiceHistory(workstation.id, quarter);
+      setServiceLogs(historyData);
+
+      // Fetch status options
+      const statuses = await getAssetStatuses();
+      setStatusOptions(statuses);
     } catch (error) {
       console.error("Failed to load details", error);
       setPmcReport(null);
+      setServiceLogs([]);
     } finally {
       setLoading(false);
     }
@@ -394,6 +409,17 @@ const MaintenanceView: React.FC<Props> = ({
             Service Workstation
           </button>
 
+          {/* ✅ Repair Component Button (Only shows if report exists) */}
+          {pmcReport && (
+            <button
+              onClick={() => setShowRepairModal(true)}
+              className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 flex items-center shadow-sm"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              Repair Component
+            </button>
+          )}
+
           {/* ✅ Download Report Button (Only shows if report exists) */}
           {pmcReport && (
             <button
@@ -427,16 +453,40 @@ const MaintenanceView: React.FC<Props> = ({
             Workstation Status
           </h3>
           {pmcReport ? (
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${pmcReport.workstation_status === "For Repair" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
-            >
-              {pmcReport.workstation_status}
-            </span>
+            <>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${pmcReport.workstation_status === "For Repair" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
+              >
+                {pmcReport.workstation_status}
+              </span>
+              {pmcReport.service_count > 1 && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Serviced {pmcReport.service_count} times this quarter
+                </p>
+              )}
+            </>
           ) : (
             <span className="text-gray-500 italic">Pending Maintenance</span>
           )}
         </div>
       </div>
+
+      {/* Service History Section */}
+      {serviceLogs.length > 0 && (
+        <div className="mb-8">
+          <div className="border rounded-md overflow-hidden shadow-sm bg-white">
+            <div className="bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex items-center">
+              <History className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-medium text-indigo-900 ml-2">
+                Service History
+              </h3>
+            </div>
+            <div className="p-6">
+              <ServiceHistoryTimeline logs={serviceLogs} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-8">
         {/* Procedures Card */}
@@ -499,6 +549,22 @@ const MaintenanceView: React.FC<Props> = ({
           </p>
         </div>
       </div>
+
+      {/* Repair Modal */}
+      {showRepairModal && pmcReport && (
+        <RepairModal
+          workstation={workstation}
+          quarter={quarter}
+          labId={pmcReport.lab_id}
+          assets={assets}
+          statusOptions={statusOptions}
+          onSuccess={() => {
+            setShowRepairModal(false);
+            fetchData();
+          }}
+          onClose={() => setShowRepairModal(false)}
+        />
+      )}
     </div>
   );
 };

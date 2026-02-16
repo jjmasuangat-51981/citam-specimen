@@ -21,11 +21,60 @@ export interface PMCReport {
   connectivity_speed?: string;
   connectivity_speed_status?: string;
 
+  // Service tracking fields
+  service_count?: number;
+  updated_at?: string;
+
   // Relations
   procedures?: {
     procedure: { procedure_name: string; procedure_id: number };
     is_checked: boolean;
   }[];
+  service_logs?: ServiceLog[];
+}
+
+export interface ServiceLog {
+  log_id: number;
+  pmc_id: number;
+  service_type: string;
+  service_date: string;
+  performed_by: number;
+  remarks?: string;
+  workstation_status_before?: string;
+  workstation_status_after?: string;
+  created_at: string;
+  user?: {
+    user_id: number;
+    full_name: string;
+  };
+  asset_actions?: ServiceLogAsset[];
+  log_procedures?: ServiceLogProcedure[];
+}
+
+export interface ServiceLogAsset {
+  id: number;
+  log_id: number;
+  asset_id: number;
+  action: string;
+  status_before?: string;
+  status_after?: string;
+  remarks?: string;
+  old_property_tag?: string;
+  new_property_tag?: string;
+  replacement_asset_id?: number;
+  asset?: any;
+}
+
+export interface ServiceLogProcedure {
+  id: number;
+  log_id: number;
+  procedure_id: number;
+  is_checked: boolean;
+  remarks?: string;
+  procedure?: {
+    procedure_id: number;
+    procedure_name: string;
+  };
 }
 
 // 1. GET ALL REPORTS (Filtered by Lab & Quarter)
@@ -47,5 +96,22 @@ export const getPMCReport = async (workstationId: number, quarter: string) => {
 // 3. CREATE REPORT
 export const createPMCReport = async (data: any) => {
   const response = await api.post("/maintenance/pmc", data);
+  return response.data;
+};
+
+// 4. GET SERVICE HISTORY
+export const getServiceHistory = async (
+  workstationId: number,
+  quarter?: string
+) => {
+  const params: any = { workstation_id: workstationId };
+  if (quarter) params.quarter = quarter;
+  const response = await api.get("/maintenance/pmc/history", { params });
+  return response.data;
+};
+
+// 5. CREATE REPAIR LOG
+export const createRepairLog = async (data: any) => {
+  const response = await api.post("/maintenance/pmc/repair", data);
   return response.data;
 };
