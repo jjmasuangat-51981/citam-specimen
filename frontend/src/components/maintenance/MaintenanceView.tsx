@@ -169,6 +169,11 @@ const MaintenanceView: React.FC<Props> = ({
   // Apply overlay to assets
   const overlaidAssets = overlayAssetData(assets);
 
+  // Compute derived values once
+  const completedProcedures = getCompletedProcedures();
+  const currentWorkstationStatus = getCurrentWorkstationStatus();
+  const currentRemarksData = getCurrentRemarks();
+
   // --- REPORT GENERATION HANDLER ---
   const handleDownloadReport = () => {
     if (!pmcReport) return;
@@ -187,9 +192,6 @@ const MaintenanceView: React.FC<Props> = ({
       hour: "2-digit",
       minute: "2-digit",
     });
-
-    // Use overlaid procedures
-    const completedProcedures = getCompletedProcedures();
 
     // 1. Map Procedures to Checkmarks
     const checkProc = (name: string) =>
@@ -235,7 +237,6 @@ const MaintenanceView: React.FC<Props> = ({
         ["Functional", "Working", "Operational"].includes(asset.status),
       );
 
-    const currentWorkstationStatus = getCurrentWorkstationStatus();
     componentsList.push({
       name: "System Unit",
       ...mapStatus(currentWorkstationStatus),
@@ -289,9 +290,6 @@ const MaintenanceView: React.FC<Props> = ({
       (user as any)?.fullName ||
       "YOUR NAME HERE";
 
-    // Get overlaid remarks
-    const remarksData = getCurrentRemarks();
-
     // 4. Construct Final Payload
     const templateData = {
       date: formattedDate,
@@ -305,7 +303,7 @@ const MaintenanceView: React.FC<Props> = ({
       sys_perf: checkProc("System Performance"),
       reg_clean: checkProc("Regular Cleaning"),
       components: componentsList,
-      overall_remarks: remarksData.remarks || "N/A",
+      overall_remarks: currentRemarksData.remarks || "N/A",
       custodian: rawCustodianName.toUpperCase(),
     };
 
@@ -331,7 +329,6 @@ const MaintenanceView: React.FC<Props> = ({
   );
   
   // Use overlaid workstation status
-  const currentWorkstationStatus = getCurrentWorkstationStatus();
   const parentSystemUnit = {
     asset_id: -1,
     unit_name: "System Unit (Overall)",
@@ -359,8 +356,6 @@ const MaintenanceView: React.FC<Props> = ({
       status: pmcReport?.connectivity_speed_status || "N/A",
     },
   ];
-
-  const completedProcedures = getCompletedProcedures();
 
   const ReadOnlyTable = ({
     title,
@@ -636,23 +631,14 @@ const MaintenanceView: React.FC<Props> = ({
           <div className="flex items-center mb-2">
             <AlignLeft className="w-5 h-5 text-gray-500 mr-2" />
             <h3 className="font-medium text-gray-900">Overall Remarks</h3>
-            {(() => {
-              const remarksData = getCurrentRemarks();
-              if (remarksData.isFromServiceLog && remarksData.serviceDate) {
-                return (
-                  <span className="ml-2 text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                    Latest service: {new Date(remarksData.serviceDate).toLocaleDateString()}
-                  </span>
-                );
-              }
-              return null;
-            })()}
+            {currentRemarksData.isFromServiceLog && currentRemarksData.serviceDate && (
+              <span className="ml-2 text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                Latest service: {new Date(currentRemarksData.serviceDate).toLocaleDateString()}
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-700 whitespace-pre-wrap pl-7">
-            {(() => {
-              const remarksData = getCurrentRemarks();
-              return remarksData.remarks || "No remarks recorded.";
-            })()}
+            {currentRemarksData.remarks || "No remarks recorded."}
           </p>
         </div>
       </div>
