@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getPMCReport, getServiceHistory } from "../../api/maintenance";
 import { getWorkstationAssets, getAssetStatuses } from "../../api/inventory";
-import { useAuth } from "../../context/AuthContext"; // ✅ Imported to get Custodian Name
+import { useAuth } from "../../context/AuthContext";
 import {
   Monitor,
   Calendar,
@@ -12,10 +12,11 @@ import {
   Keyboard,
   Network,
   AlignLeft,
-  Download, // ✅ Added Download Icon
+  Download,
   History,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-// ✅ Import the generator utility we will create below
 import { generateQPMCReport } from "../../utils/reportGenerator";
 import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
 import RepairModal from "./RepairModal";
@@ -47,13 +48,14 @@ const MaintenanceView: React.FC<Props> = ({
   onService,
   onBack,
 }) => {
-  const { user } = useAuth(); // ✅ Get logged-in user (Custodian)
+  const { user } = useAuth();
   const [pmcReport, setPmcReport] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
   const [serviceLogs, setServiceLogs] = useState<any[]>([]);
   const [statusOptions, setStatusOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showRepairModal, setShowRepairModal] = useState(false);
+  const [showServiceHistory, setShowServiceHistory] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -118,13 +120,13 @@ const MaintenanceView: React.FC<Props> = ({
 
     const completedProcedures = pmcReport.procedures || [];
 
-    // 1. Map Procedures to Checkmarks (Keeping these as boxes for the top section)
+    // 1. Map Procedures to Checkmarks
     const checkProc = (name: string) =>
       completedProcedures.some((p: any) => p.procedure.procedure_name === name)
         ? "☑"
         : "☐";
 
-    // 2. Map Statuses to Table Checkmarks (✅ CHANGED: Now uses ✓ and blank)
+    // 2. Map Statuses to Table Checkmarks
     const mapStatus = (status: string) => ({
       func: ["Functional", "Working", "Operational"].includes(status)
         ? "✓"
@@ -169,7 +171,7 @@ const MaintenanceView: React.FC<Props> = ({
       remarks: isAllFunctional ? "Functional" : "",
     });
 
-    // 6. Add the System Unit Components right under it (with an indent arrow!)
+    // 6. Add the System Unit Components right under it
     systemComponents.forEach((asset) => {
       componentsList.push({
         name: `   ↳ ${asset.unit_name}`,
@@ -208,8 +210,6 @@ const MaintenanceView: React.FC<Props> = ({
       remarks: pmcReport.connectivity_speed || "",
     });
 
-    // ✅ FIX: Find the correct property for the Custodian Name
-    // This checks multiple possible variable names in case your Auth context uses a different one
     const rawCustodianName =
       pmcReport?.user?.full_name ||
       (user as any)?.full_name ||
@@ -219,8 +219,8 @@ const MaintenanceView: React.FC<Props> = ({
 
     // 4. Construct Final Payload
     const templateData = {
-      date: formattedDate, // ✅ Uses "February 13, 2026" format
-      time: formattedTime, // ✅ Uses the exact time they clicked download
+      date: formattedDate,
+      time: formattedTime,
       lab: workstation.lab_name || "N/A",
       workstation: workstation.name,
       hw_main: checkProc("Hardware Maintenance"),
@@ -231,7 +231,7 @@ const MaintenanceView: React.FC<Props> = ({
       reg_clean: checkProc("Regular Cleaning"),
       components: componentsList,
       overall_remarks: pmcReport.overall_remarks || "N/A",
-      custodian: rawCustodianName.toUpperCase(), // ✅ Formats the name to uppercase
+      custodian: rawCustodianName.toUpperCase(),
     };
 
     // Trigger Download
@@ -339,7 +339,6 @@ const MaintenanceView: React.FC<Props> = ({
                   className={`transition-colors ${isParentRow ? "bg-blue-50 font-medium border-b border-blue-100" : "hover:bg-gray-50"}`}
                 >
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {/* ✅ FIX: Only show the arrow if it's a child inside the System Unit table */}
                     {isSystemParentIncluded && !isParentRow && (
                       <span className="text-gray-400 mr-2">↳</span>
                     )}
@@ -409,7 +408,7 @@ const MaintenanceView: React.FC<Props> = ({
             Service Workstation
           </button>
 
-          {/* ✅ Repair Component Button (Only shows if report exists) */}
+          {/* Repair Component Button (Only shows if report exists) */}
           {pmcReport && (
             <button
               onClick={() => setShowRepairModal(true)}
@@ -420,7 +419,7 @@ const MaintenanceView: React.FC<Props> = ({
             </button>
           )}
 
-          {/* ✅ Download Report Button (Only shows if report exists) */}
+          {/* Download Report Button (Only shows if report exists) */}
           {pmcReport && (
             <button
               onClick={handleDownloadReport}
@@ -471,19 +470,35 @@ const MaintenanceView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Service History Section */}
+      {/* Service History Section — Collapsible */}
       {serviceLogs.length > 0 && (
         <div className="mb-8">
           <div className="border rounded-md overflow-hidden shadow-sm bg-white">
-            <div className="bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex items-center">
-              <History className="w-5 h-5 text-indigo-600" />
-              <h3 className="font-medium text-indigo-900 ml-2">
-                Service History
-              </h3>
-            </div>
-            <div className="p-6">
-              <ServiceHistoryTimeline logs={serviceLogs} />
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowServiceHistory(!showServiceHistory)}
+              className="w-full bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex items-center justify-between cursor-pointer hover:bg-indigo-100 transition-colors"
+            >
+              <div className="flex items-center">
+                <History className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-medium text-indigo-900 ml-2">
+                  Service History
+                </h3>
+                <span className="ml-2 text-xs text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                  {serviceLogs.length} {serviceLogs.length === 1 ? "entry" : "entries"}
+                </span>
+              </div>
+              {showServiceHistory ? (
+                <ChevronUp className="w-5 h-5 text-indigo-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-indigo-600" />
+              )}
+            </button>
+            {showServiceHistory && (
+              <div className="p-6">
+                <ServiceHistoryTimeline logs={serviceLogs} />
+              </div>
+            )}
           </div>
         </div>
       )}
