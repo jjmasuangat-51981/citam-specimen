@@ -358,8 +358,8 @@ const MaintenanceView: React.FC<Props> = ({
     },
   ].map(item => ({
     ...item,
-    // Handle empty strings as "Not specified"
-    value: item.value === "" || item.value === "N/A" ? "N/A" : item.value,
+    // Handle empty strings as N/A
+    value: item.value === "" ? "N/A" : item.value,
   }));
 
   const ReadOnlyTable = ({
