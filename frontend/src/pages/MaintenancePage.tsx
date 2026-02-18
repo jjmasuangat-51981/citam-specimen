@@ -22,6 +22,9 @@ const MaintenancePage = () => {
     name: string;
   } | null>(null);
 
+  // Refresh counter to force MaintenanceView to re-fetch data
+  const [refreshCounter, setRefreshCounter] = useState<number>(0);
+
   // Filter State
   const [selectedQuarter, setSelectedQuarter] = useState<string>("1st");
   const [userLabId, setUserLabId] = useState<number | null>(null);
@@ -213,6 +216,7 @@ const MaintenancePage = () => {
       {/* VIEW MODE */}
       {view === "view" && targetWorkstation && (
         <MaintenanceView
+          key={refreshCounter}
           workstation={{
             id: targetWorkstation.id,
             name: targetWorkstation.name,
@@ -232,6 +236,8 @@ const MaintenancePage = () => {
           onSuccess={() => {
             setView("list");
             fetchData();
+            // Increment refresh counter to force MaintenanceView to re-fetch when navigated back
+            setRefreshCounter((prev) => prev + 1);
           }}
           onCancel={() => setView("list")}
         />

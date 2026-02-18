@@ -356,7 +356,11 @@ const MaintenanceView: React.FC<Props> = ({
       value: pmcReport?.connectivity_speed || "N/A",
       status: pmcReport?.connectivity_speed_status || "N/A",
     },
-  ];
+  ].map(item => ({
+    ...item,
+    // Handle empty strings as "Not specified"
+    value: item.value === "" || item.value === "N/A" ? "N/A" : item.value,
+  }));
 
   const ReadOnlyTable = ({
     title,
@@ -438,7 +442,13 @@ const MaintenanceView: React.FC<Props> = ({
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${["Functional", "Working", "Operational"].includes(item.status) ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        ["Functional", "Working", "Operational"].includes(item.status)
+                          ? "bg-green-100 text-green-800"
+                          : item.status === "N/A"
+                            ? "bg-gray-100 text-gray-600"
+                            : "bg-red-100 text-red-800"
+                      }`}
                     >
                       {item.status}
                     </span>
