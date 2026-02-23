@@ -110,7 +110,10 @@ const MaintenanceForm: React.FC<Props> = ({
     }
   }, [targetWorkstation, formData.quarter]);
 
-  const loadExistingReportData = async (workstationId: number, quarter: string) => {
+  const loadExistingReportData = async (
+    workstationId: number,
+    quarter: string,
+  ) => {
     try {
       const existingReport = await getPMCReport(workstationId, quarter);
       if (existingReport) {
@@ -144,11 +147,15 @@ const MaintenanceForm: React.FC<Props> = ({
           setProcedures((prev) =>
             prev.map((proc) => {
               const wasCompleted = existingReport.procedures?.some(
-                (p) => p.procedure.procedure_id === proc.procedure_id && p.is_checked,
+                (p) =>
+                  p.procedure.procedure_id === proc.procedure_id &&
+                  p.is_checked,
               );
               return {
                 ...proc,
-                overall_status: wasCompleted ? "Completed" : proc.overall_status,
+                overall_status: wasCompleted
+                  ? "Completed"
+                  : proc.overall_status,
               };
             }),
           );
@@ -156,7 +163,9 @@ const MaintenanceForm: React.FC<Props> = ({
       }
     } catch (err) {
       // No existing report found — that's fine, use defaults
-      console.log("No existing report for this workstation/quarter — using defaults.");
+      console.log(
+        "No existing report for this workstation/quarter — using defaults.",
+      );
     }
   };
 
@@ -363,7 +372,7 @@ const MaintenanceForm: React.FC<Props> = ({
         />
 
         {targetWorkstation && (
-          <> 
+          <>
             <AssetTable
               title="System Unit Components"
               icon={<Cpu className="w-5 h-5 text-blue-600" />}

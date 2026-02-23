@@ -5,15 +5,26 @@ import InventoryPage from "./pages/InventoryPage";
 import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
 import AdminReportsPage from "./pages/AdminReportsPage";
-import ArchivedReportsPage from "./pages/ArchivedReportsPage";
+import { ArchivesPage } from "./pages/ArchivesPage";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
+import FormsPage from "./pages/FormsPage";
+import PublicFormsPage from "./pages/PublicFormsPage";
+import PublicLandingPage from "./pages/PublicLandingPage";
+import OneTimeFormPage from "./pages/OneTimeFormPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
-// ✅ UPDATED: Added Wrench icon
-import { Package, Building, FileText, Users, Wrench } from "lucide-react";
-import { getDashboardStats, type DashboardData } from "./api/dashboard";
 import MaintenancePage from "./pages/MaintenancePage";
+// ✅ UPDATED: Added Wrench icon
+import {
+  Package,
+  Building,
+  FileText,
+  Users,
+  Wrench,
+  ClipboardList,
+} from "lucide-react";
+import { getDashboardStats, type DashboardData } from "./api/dashboard";
 
 interface CreateUserData {
   full_name: string;
@@ -107,7 +118,11 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6`}>
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${
+          !isAdmin ? "lg:grid-cols-3" : ""
+        }`}
+      >
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={() => handleNavigate("inventory")}
@@ -177,6 +192,30 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => handleNavigate("forms")}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  {isAdmin ? "Forms for Approval" : "Active Forms"}
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalForms}
+                </p>
+                <p className="text-xs text-indigo-600 mt-1">
+                  Click to view forms →
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                <ClipboardList className="w-6 h-6 text-indigo-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {isAdmin ? (
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
@@ -222,11 +261,58 @@ function App() {
     | "labs"
     | "reports"
     | "admin-reports"
-    | "archived-reports"
+    | "archives"
     | "user-management"
     | "profile"
+    | "forms"
+    | "public-forms"
+    | "public-landing"
+    | "one-time-form"
+    | "login"
     | "maintenance"
-  >("home");
+  >(() => {
+    const path = window.location.pathname;
+    if (path === "/login") return "login";
+    if (path === "/public-forms") return "public-forms";
+    if (path === "/one-time" || path.startsWith("/one-time"))
+      return "one-time-form";
+
+    const storedUser = localStorage.getItem("user");
+    const isLoggedIn = storedUser && storedUser !== "null";
+
+    if (path === "/") {
+      return isLoggedIn ? "home" : "public-landing";
+    }
+
+    return isLoggedIn ? "home" : "public-landing";
+  });
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (user && path === "/" && currentPage === "public-landing") {
+      setCurrentPage("home");
+    }
+  }, [user, currentPage]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === "/public-forms") {
+        setCurrentPage("public-forms");
+      } else if (path === "/one-time" || path.startsWith("/one-time")) {
+        setCurrentPage("one-time-form");
+      } else if (path === "/public-landing") {
+        setCurrentPage("public-landing");
+      } else if (!user) {
+        setCurrentPage("public-landing");
+      } else {
+        setCurrentPage("home");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [user]);
 
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
     full_name: "",
@@ -247,6 +333,15 @@ function App() {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as any);
+    if (page === "public-forms") {
+      window.history.pushState(null, "", "/public-forms");
+    } else if (page === "login") {
+      window.history.pushState(null, "", "/login");
+    } else if (page === "one-time-form") {
+      window.history.pushState(null, "", "/one-time");
+    } else {
+      window.history.pushState(null, "", "/");
+    }
   };
 
   const renderPage = () => {
@@ -266,10 +361,8 @@ function App() {
         return <DailyReportsPage />;
       case "admin-reports":
         return <AdminReportsPage />;
-      case "archived-reports":
-        return <ArchivedReportsPage />;
-      case "maintenance":
-        return <MaintenancePage />;
+      case "archives":
+        return <ArchivesPage />;
       case "user-management":
         return (
           <UserManagementPage
@@ -279,15 +372,36 @@ function App() {
         );
       case "profile":
         return <ProfilePage />;
+      case "maintenance":
+        return <MaintenancePage />;
+      case "forms":
+        return <FormsPage />;
+      case "one-time-form":
+        return <OneTimeFormPage />;
+      case "public-forms":
+        return <PublicFormsPage />;
+      case "public-landing":
+        return <PublicLandingPage />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
   };
 
+  // 1. PUBLIC PAGES - Never show sidebar, regardless of login status
+  if (
+    currentPage === "one-time-form" ||
+    currentPage === "public-forms" ||
+    currentPage === "public-landing"
+  ) {
+    return renderPage();
+  }
+
+  // 2. IF NOT LOGGED IN -> SHOW LOGIN PAGE
   if (!user) {
     return <LoginPage />;
   }
 
+  // 3. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
   return (
     <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}

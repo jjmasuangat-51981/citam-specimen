@@ -311,7 +311,7 @@ export const createRepairLog = async (req: Request, res: Response) => {
 
       if (!pmcReport) {
         throw new Error(
-          "No PMC report exists for this workstation and quarter. Please perform routine service first."
+          "No PMC report exists for this workstation and quarter. Please perform routine service first.",
         );
       }
 
@@ -348,7 +348,8 @@ export const createRepairLog = async (req: Request, res: Response) => {
             await tx.asset_details.update({
               where: { detail_id: oldAsset.details.detail_id },
               data: {
-                status_id: decommissionedStatus?.status_id || oldAsset.details.status_id,
+                status_id:
+                  decommissionedStatus?.status_id || oldAsset.details.status_id,
                 asset_remarks: `Replaced on ${new Date(service_date).toLocaleDateString()}. ${action.remarks || ""}`,
               },
             });
@@ -381,7 +382,10 @@ export const createRepairLog = async (req: Request, res: Response) => {
             // Store the replacement asset ID
             action.replacement_asset_id = newAsset.asset_id;
           }
-        } else if (action.action === "REPAIRED" || action.action === "UPGRADED") {
+        } else if (
+          action.action === "REPAIRED" ||
+          action.action === "UPGRADED"
+        ) {
           // Update asset status
           const asset = await tx.inventory_assets.findUnique({
             where: { asset_id: action.asset_id },
@@ -397,7 +401,8 @@ export const createRepairLog = async (req: Request, res: Response) => {
             await tx.asset_details.update({
               where: { detail_id: asset.details.detail_id },
               data: {
-                status_id: functionalStatus?.status_id || asset.details.status_id,
+                status_id:
+                  functionalStatus?.status_id || asset.details.status_id,
                 asset_remarks: action.remarks
                   ? `${action.action} on ${new Date(service_date).toLocaleDateString()}: ${action.remarks}`
                   : asset.details.asset_remarks,
@@ -410,9 +415,11 @@ export const createRepairLog = async (req: Request, res: Response) => {
       // Determine new workstation status
       let workstation_status_after = "Functional";
       const hasReplacements = asset_actions.some(
-        (a: any) => a.action === "REPLACED"
+        (a: any) => a.action === "REPLACED",
       );
-      const hasRepairs = asset_actions.some((a: any) => a.action === "REPAIRED");
+      const hasRepairs = asset_actions.some(
+        (a: any) => a.action === "REPAIRED",
+      );
 
       if (hasReplacements) {
         workstation_status_after = "Upgraded";
@@ -463,6 +470,8 @@ export const createRepairLog = async (req: Request, res: Response) => {
     res.status(201).json(result);
   } catch (error: any) {
     console.error("Create Repair Log Error:", error);
-    res.status(500).json({ error: error.message || "Failed to create repair log" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to create repair log" });
   }
 };

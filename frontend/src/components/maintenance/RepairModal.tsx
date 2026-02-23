@@ -34,7 +34,7 @@ const RepairModal: React.FC<Props> = ({
   onClose,
 }) => {
   const [serviceDate, setServiceDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [actionType, setActionType] = useState<
     "REPAIR" | "REPLACE" | "UPGRADE"
@@ -67,7 +67,7 @@ const RepairModal: React.FC<Props> = ({
   const handleReplacementDetailChange = (
     assetId: number,
     field: string,
-    value: string
+    value: string,
   ) => {
     setReplacementDetails((prev) => ({
       ...prev,
@@ -135,9 +135,7 @@ const RepairModal: React.FC<Props> = ({
     } catch (err) {
       console.error("Failed to create repair log:", err);
       const error = err as { response?: { data?: { error?: string } } };
-      setError(
-        error.response?.data?.error || "Failed to submit repair log"
-      );
+      setError(error.response?.data?.error || "Failed to submit repair log");
     } finally {
       setLoading(false);
     }
@@ -280,12 +278,14 @@ const RepairModal: React.FC<Props> = ({
                       <input
                         type="text"
                         placeholder="New Property Tag"
-                        value={replacementDetails[assetId]?.new_property_tag || ""}
+                        value={
+                          replacementDetails[assetId]?.new_property_tag || ""
+                        }
                         onChange={(e) =>
                           handleReplacementDetailChange(
                             assetId,
                             "new_property_tag",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="px-3 py-1.5 text-sm border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -300,7 +300,7 @@ const RepairModal: React.FC<Props> = ({
                           handleReplacementDetailChange(
                             assetId,
                             "new_serial_number",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="px-3 py-1.5 text-sm border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -308,12 +308,14 @@ const RepairModal: React.FC<Props> = ({
                       <input
                         type="text"
                         placeholder="Description"
-                        value={replacementDetails[assetId]?.new_description || ""}
+                        value={
+                          replacementDetails[assetId]?.new_description || ""
+                        }
                         onChange={(e) =>
                           handleReplacementDetailChange(
                             assetId,
                             "new_description",
-                            e.target.value
+                            e.target.value,
                           )
                         }
                         className="px-3 py-1.5 text-sm border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"

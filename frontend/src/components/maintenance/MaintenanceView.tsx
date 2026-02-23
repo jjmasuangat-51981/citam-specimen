@@ -485,7 +485,8 @@ const MaintenanceView: React.FC<Props> = ({
                   Service History
                 </h3>
                 <span className="ml-2 text-xs text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
-                  {serviceLogs.length} {serviceLogs.length === 1 ? "entry" : "entries"}
+                  {serviceLogs.length}{" "}
+                  {serviceLogs.length === 1 ? "entry" : "entries"}
                 </span>
               </div>
               {showServiceHistory ? (

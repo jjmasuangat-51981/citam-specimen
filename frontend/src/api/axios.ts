@@ -1,8 +1,16 @@
 //frontend/src/api/axios.ts
 import axios from "axios";
 
+const getApiBaseUrl = () => {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001';
+  }
+  return `http://${hostname}:3001`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -30,7 +38,12 @@ api.interceptors.response.use(
       // Token expired or invalid, logout user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/";
+      
+      // Only redirect to login if not already on login page
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login') {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

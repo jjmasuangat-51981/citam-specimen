@@ -70,8 +70,8 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
           <div className="flex gap-4">
             {/* Icon Circle */}
             <div
-              className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getServiceTypeBadgeColor(
-                log.service_type
+              className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getServiceTypeBadgeColor(
+                log.service_type,
               )} border-2`}
             >
               {getServiceTypeIcon(log.service_type)}
@@ -85,7 +85,7 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className={`px-2 py-0.5 text-xs font-medium rounded border ${getServiceTypeBadgeColor(
-                        log.service_type
+                        log.service_type,
                       )}`}
                     >
                       {log.service_type}
@@ -103,18 +103,19 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
               </div>
 
               {/* Status Change */}
-              {log.workstation_status_before && log.workstation_status_after && (
-                <div className="mb-3 p-2 bg-gray-50 rounded flex items-center gap-2 text-sm">
-                  <span className="font-medium">Status:</span>
-                  <span className="text-gray-600">
-                    {log.workstation_status_before}
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                  <span className="font-medium text-green-700">
-                    {log.workstation_status_after}
-                  </span>
-                </div>
-              )}
+              {log.workstation_status_before &&
+                log.workstation_status_after && (
+                  <div className="mb-3 p-2 bg-gray-50 rounded flex items-center gap-2 text-sm">
+                    <span className="font-medium">Status:</span>
+                    <span className="text-gray-600">
+                      {log.workstation_status_before}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
+                    <span className="font-medium text-green-700">
+                      {log.workstation_status_after}
+                    </span>
+                  </div>
+                )}
 
               {/* Asset Actions */}
               {log.asset_actions && log.asset_actions.length > 0 && (
@@ -135,16 +136,19 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
                           <span>
                             {action.asset?.units?.unit_name || "Unknown"}{" "}
                           </span>
-                          {action.old_property_tag && action.new_property_tag && (
-                            <span className="text-gray-600">
-                              ({action.old_property_tag} → {action.new_property_tag})
-                            </span>
-                          )}
-                          {action.old_property_tag && !action.new_property_tag && (
-                            <span className="text-gray-600">
-                              ({action.old_property_tag})
-                            </span>
-                          )}
+                          {action.old_property_tag &&
+                            action.new_property_tag && (
+                              <span className="text-gray-600">
+                                ({action.old_property_tag} →{" "}
+                                {action.new_property_tag})
+                              </span>
+                            )}
+                          {action.old_property_tag &&
+                            !action.new_property_tag && (
+                              <span className="text-gray-600">
+                                ({action.old_property_tag})
+                              </span>
+                            )}
                           {action.status_before && action.status_after && (
                             <span className="text-gray-600">
                               {" "}

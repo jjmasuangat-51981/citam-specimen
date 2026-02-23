@@ -96,7 +96,7 @@ export const getLabPMCReports = async (labId: number, quarter: string) => {
 // 2. GET SINGLE REPORT (By Workstation & Quarter)
 export const getPMCReport = async (
   workstationId: number,
-  quarter: string
+  quarter: string,
 ): Promise<PMCReport> => {
   const response = await api.get("/maintenance/pmc/detail", {
     params: { workstation_id: workstationId, quarter },
@@ -106,7 +106,7 @@ export const getPMCReport = async (
 
 // 3. CREATE REPORT
 export const createPMCReport = async (
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): Promise<PMCReport> => {
   const response = await api.post("/maintenance/pmc", data);
   return response.data;
@@ -115,7 +115,7 @@ export const createPMCReport = async (
 // 4. GET SERVICE HISTORY
 export const getServiceHistory = async (
   workstationId: number,
-  quarter?: string
+  quarter?: string,
 ): Promise<ServiceLog[]> => {
   const params: Record<string, string | number> = {
     workstation_id: workstationId,
@@ -127,7 +127,7 @@ export const getServiceHistory = async (
 
 // 5. CREATE REPAIR LOG
 export const createRepairLog = async (
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): Promise<ServiceLog> => {
   const response = await api.post("/maintenance/pmc/repair", data);
   return response.data;
