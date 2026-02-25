@@ -156,7 +156,7 @@ const MaintenancePage = () => {
               {/* Right Side: Action Controls */}
               <div className="flex items-center space-x-3">
                 <button className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors">
-                  <Plus className="w-4 h-4 mr-2 text-blue-600" /> Add Schedule
+                  <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set Schedule
                 </button>
                 <button className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors">
                   <FileText className="w-4 h-4 mr-2" /> View Report
@@ -224,7 +224,7 @@ const MaintenancePage = () => {
                       Workstation Name
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Current Status
+                      Workstation Status
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       {selectedQuarter} Quarter Status
