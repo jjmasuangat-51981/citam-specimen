@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { getLabPMCReports, type PMCReport } from "../api/maintenance";
+import QuarterlyReportsView from "../components/maintenance/QuarterlyReportsView";
+import SetScheduleModal from "../components/maintenance/SetScheduleModal";
 
 // Import workstation helper
 import { getLabWorkstationsForReport } from "../api/workstationReports";
@@ -10,13 +12,13 @@ import { useAuth } from "../context/AuthContext";
 
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceView from "../components/maintenance/MaintenanceView";
-import { CheckCircle, XCircle, Monitor, Plus, FileText } from "lucide-react";
+import { CheckCircle, XCircle, Monitor, Plus, FileText, Lock, RotateCcw, ChevronDown } from "lucide-react";
 
 const MaintenancePage = () => {
   // ✅ Get the user from AuthContext
   const { user } = useAuth();
 
-  const [view, setView] = useState<"list" | "view" | "create" | "edit">("list");
+  const [view, setView] = useState<"list" | "view" | "create" | "edit" | "reports">("list");
 
   // Data State
   const [reports, setReports] = useState<PMCReport[]>([]);
@@ -32,6 +34,11 @@ const MaintenancePage = () => {
   const [userLabId, setUserLabId] = useState<number | null>(null);
   const [assignedLabName, setAssignedLabName] = useState<string>("");
 
+  // Schedule state
+  const [openQuarters, setOpenQuarters] = useState<string[]>([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showScheduleDropdown, setShowScheduleDropdown] = useState(false);
+
   // UI-only state for toggles
   const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
 
@@ -42,6 +49,29 @@ const MaintenancePage = () => {
     { id: "3rd", num: "Q3", label: "3rd Quarter" },
     { id: "4th", num: "Q4", label: "4th Quarter" },
   ];
+
+  // Mock fetch for schedules (Later, replace with actual API call)
+  useEffect(() => {
+    if (userLabId) {
+      // Pretend the 1st Quarter is already open in the database for now
+      setOpenQuarters(["1st"]);
+    }
+  }, [userLabId]);
+
+  const handleScheduleSuccess = (newlyScheduledQuarters: string[]) => {
+    setOpenQuarters(prev => {
+      const combined = new Set([...prev, ...newlyScheduledQuarters]);
+      return Array.from(combined);
+    });
+    setShowScheduleModal(false);
+  };
+
+  const handleResetAllSchedules = () => {
+    if (window.confirm("Are you sure you want to reset all quarter schedules? This will remove all scheduled quarters.")) {
+      setOpenQuarters([]);
+      setSelectedQuarter("1st"); // Reset to default quarter
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -155,11 +185,47 @@ const MaintenancePage = () => {
 
               {/* Right Side: Action Controls */}
               <div className="flex items-center space-x-3">
-                <button className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors">
-                  <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set Schedule
-                </button>
-                <button className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors">
-                  <FileText className="w-4 h-4 mr-2" /> View Report
+                {/* Schedule Dropdown */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowScheduleDropdown(!showScheduleDropdown)}
+                    className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set Schedule
+                    <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
+                  </button>
+                  
+                  {showScheduleDropdown && (
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <button
+                        onClick={() => {
+                          setShowScheduleDropdown(false);
+                          setShowScheduleModal(true);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center rounded-t-lg"
+                      >
+                        <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set New Schedule
+                      </button>
+                      {openQuarters.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setShowScheduleDropdown(false);
+                            handleResetAllSchedules();
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center rounded-b-lg border-t border-gray-100"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" /> Reset All Schedules
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <button 
+                  onClick={() => setView("reports")}
+                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors"
+                >
+                  <FileText className="w-4 h-4 mr-2" /> View Reports
                 </button>
               </div>
             </div>
@@ -171,31 +237,40 @@ const MaintenancePage = () => {
             <div className="flex gap-2 items-end h-21.25">
               {quartersList.map((q) => {
                 const isActive = selectedQuarter === q.id;
+                const isOpen = openQuarters.includes(q.id);
+
                 return (
                   <button
                     key={q.id}
-                    onClick={() => setSelectedQuarter(q.id)}
+                    onClick={() => {
+                      if (isOpen) setSelectedQuarter(q.id);
+                    }}
+                    disabled={!isOpen}
                     className={`relative flex flex-col items-start justify-center w-36 transition-all ${
-                      isActive
+                      !isOpen 
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed rounded-xl px-5 py-3 mb-2 border border-gray-200"
+                        : isActive
                         ? "bg-white text-blue-600 rounded-t-2xl z-10 border-t border-x border-gray-100 px-6 py-4 -mb-px shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
                         : "bg-blue-500 text-white hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
                     }`}
                   >
-                    {/* The vertical left blue line for the active tab */}
-                    {isActive && (
+                    {isActive && isOpen && (
                       <div className="absolute left-0 top-4 bottom-4 w-1 bg-blue-600 rounded-r-md"></div>
                     )}
-                    <div className={isActive ? "pl-1" : ""}>
-                      <span className="text-2xl font-bold leading-none block text-left mb-1">
-                        {q.num}
-                      </span>
-                      <span
-                        className={`text-xs font-medium tracking-wide block text-left ${
-                          isActive ? "text-gray-500" : "text-blue-100"
-                        }`}
-                      >
-                        {q.label}
-                      </span>
+                    
+                    <div className={`w-full flex justify-between items-center ${isActive ? "pl-1" : ""}`}>
+                      <div>
+                        <span className="text-2xl font-bold leading-none block text-left mb-1">
+                          {q.num}
+                        </span>
+                        <span className={`text-xs font-medium tracking-wide block text-left ${
+                          !isOpen ? "text-gray-400" : isActive ? "text-gray-500" : "text-blue-100"
+                        }`}>
+                          {q.label}
+                        </span>
+                      </div>
+                      
+                      {!isOpen && <Lock className="w-4 h-4 text-gray-400 opacity-70" />}
                     </div>
                   </button>
                 );
@@ -323,6 +398,25 @@ const MaintenancePage = () => {
             fetchData();
           }}
           onCancel={() => setView("list")}
+        />
+      )}
+
+      {/* REPORTS VIEW */}
+      {view === "reports" && (
+        <QuarterlyReportsView 
+          labId={userLabId} 
+          labName={assignedLabName} 
+          labWorkstations={labWorkstations}
+          onBack={() => setView("list")} 
+        />
+      )}
+
+      {/* SET SCHEDULE MODAL */}
+      {showScheduleModal && (
+        <SetScheduleModal
+          labId={userLabId}
+          onClose={() => setShowScheduleModal(false)}
+          onSuccess={handleScheduleSuccess}
         />
       )}
     </div>
